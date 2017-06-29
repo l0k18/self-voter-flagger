@@ -64,7 +64,8 @@ function init(callback) {
 
 function doProcess(startAtBlockNum, callback) {
   wait.launchFiber(function() {
-    var numSelfVotesProcessed = 0;
+    var totalVotes = 0;
+    var numSelfVotes = 0;
     for (var i = startAtBlockNum; i <= mProperties.head_block_number; i++) {
       var block = wait.for(steem_getBlock_wrapper, i);
       //console.log("block info: "+JSON.stringify(block));
@@ -77,14 +78,17 @@ function doProcess(startAtBlockNum, callback) {
           try {
             if (opName !== undefined && opName !== null
               && opName.localeCompare("vote") == 0) {
-              console.log("DEBUG ** vote at b " + i + ":t " + j + ":op " +
-                k + ", detail:" + JSON.stringify(opDetail));
+
+              totalVotes++;
 
               // check vote is a self vote
               if (opDetail.voter.localeCompare(opDetail.author) != 0) {
                 continue;
               }
-              numSelfVotesProcessed++;
+              numSelfVotes++;
+
+              console.log("- self vote at b " + i + ":t " + j + ":op " +
+                k + ", detail:" + JSON.stringify(opDetail));
 
               // FIRST THINGS FIRST, check their SP
               // TODO : cache user accounts
@@ -150,8 +154,9 @@ function doProcess(startAtBlockNum, callback) {
         }
       }
     }
-    console.log("NUM SELF VOTES from block "+startAtBlockNum+" to" +
-      mProperties.head_block_number + " is "+numSelfVotesProcessed);
+    console.log("NUM SELF VOTES from block "+startAtBlockNum+" to " +
+      mProperties.head_block_number + " is "+numSelfVotesProcessed +
+      " out of " + totalVotes + " total");
     mLastInfos.lastBlock = mProperties.head_block_number;
     wait.for(mongoSave_wrapper, mLastInfos);
     callback();
