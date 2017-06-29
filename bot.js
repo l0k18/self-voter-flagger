@@ -67,6 +67,11 @@ function doProcess(startAtBlockNum, callback) {
         var transaction = transactions[j];
         var tName = transaction[0];
         var tDetail = transaction[1];
+        if (tName !== undefined && tName !== null
+            && tName.localeCompare("vote")) {
+          // get post to check rshares
+
+        }
         console.log("** b " + i + ":t " + j + ", transaction: "+JSON.stringify(transaction));
       }
     }
@@ -114,13 +119,13 @@ function getSteemPowerFromVest(vest) {
   }
 }
 
-function steem_getBlockHeader_wrapper(num, callback) {
+function steem_getBlockHeader_wrapper(blockNum, callback) {
   steem.api.getBlockHeader(blockNum, function(err, result) {
     callback(err, result);
   });
 }
 
-function steem_getBlock_wrapper(num, callback) {
+function steem_getBlock_wrapper(blockNum, callback) {
   steem.api.getBlock(blockNum, function(err, result) {
     callback(err, result);
   });
