@@ -72,14 +72,13 @@ function doProcess(startAtBlockNum, callback) {
       for (var j = 0; j < transactions.length; j++) {
         var transaction = transactions[j];
         for (var k = 0 ; k < transaction.operations.length ; k++) {
-          var opName = transaction.operations[0];
-          var opDetail = transaction.operations[1];
-          // DEBUG logging
+          var opName = transaction.operations[k][0];
+          var opDetail = transaction.operations[k][1];
           try {
             if (opName !== undefined && opName !== null
               && opName.localeCompare("vote") == 0) {
-              console.log("DEBUG ** vote at b " + i + ":t " + j + ", detail:" +
-                " "+JSON.stringify(opDetail));
+              console.log("DEBUG ** vote at b " + i + ":t " + j + ":op " +
+                k + ", detail:" + JSON.stringify(opDetail));
 
               // check vote is a self vote
               if (opDetail.voter.localeCompare(opDetail.author) != 0) {
