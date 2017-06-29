@@ -11,6 +11,8 @@ const
 const
   DB_RECORDS = "records";
 
+var
+  MIN_SP;
 
 var ObjectID = mongodb.ObjectID;
 var db;
@@ -50,9 +52,11 @@ function init(callback) {
     mProperties = wait.for(steem_getSteemGlobaleProperties_wrapper);
     console.log("global properties: "+JSON.stringify(mProperties));
     // get Steem Power of bot account
-    var accounts = wait.for(steem_getAccounts_wrapper);
+    var accounts = wait.for(process.env.STEEM_USER, steem_getAccounts_wrapper);
     mAccount = accounts[0];
     console.log("account: "+JSON.stringify(mAccount));
+    // set up some vars
+    MIN_SP = Number(process.env.MIN_SP);
     callback();
   });
 }
@@ -60,34 +64,93 @@ function init(callback) {
 
 function doProcess(startAtBlockNum, callback) {
   wait.launchFiber(function() {
+    var numSelfVotesProcessed = 0;
     for (var i = startAtBlockNum; i <= mProperties.head_block_number; i++) {
       var block = wait.for(steem_getBlock_wrapper, i);
-      console.log("block info: "+JSON.stringify(block));
-      /*
+      //console.log("block info: "+JSON.stringify(block));
       var transactions = block.result.transactions.operations;
       for (var j = 0; j < transactions.length; j++) {
         var transaction = transactions[j];
-        var tName = transaction[0];
-        var tDetail = transaction[1];
-        if (tName !== undefined && tName !== null
-            && tName.localeCompare("vote")) {
-          // TODO : get post to check rshares assigned to author
-          var abs_need_rshares = 0; // this will be set after
+        var opName = transaction[0];
+        var opDetail = transaction[1];
+        // DEBUG logging
+        try {
+          if (opName !== undefined && opName !== null
+            && opName.localeCompare("vote") == 0) {
+            console.log("DEBUG ** vote at b " + i + ":t " + j + ", detail:" +
+              " "+JSON.stringify(opDetail));
 
-          var vp = mAccount.voting_power;
-          last_vote_time = Time.parse(r["last_vote_time"] + 'Z')
-          now_time = Time.parse(@latest_block["timestamp"] + 'Z')
-          seconds_passed = (now_time - last_vote_time).to_i
-          vp_regenerated = seconds_passed * 10000 / 86400 / 5
-          vp += vp_regenerated
-          vp = 10000 if vp > 10000;
-          var abs_percentage = (abs_need_rshares * 10000 * 100 * 200 / vp / vests).to_i
+            // check vote is a self vote
+            if (opDetail.voter.localeCompare(opDetail.author) != 0) {
+              continue;
+            }
+            numSelfVotesProcessed++;
+
+            // FIRST THINGS FIRST, check their SP
+            // TODO : cache user accounts
+            var accounts = wait.for(opDetail.voter, steem_getAccounts_wrapper);
+            var voterAccount = accounts[0];
+            // TODO : take delegated stake into consideration?
+            var steemPower = getSteemPowerFromVest(voterAccount.vesting_shares);
+            if (steemPower < MIN_SP) {
+              console.log("SP of "+opDetail.voter+" < min of "+MIN_SP
+                +", skipping");
+              continue;
+            }
+
+            // SECOND, get rshares of vote from post
+            var content;
+            // TODO : cache posts
+            content = wait.for(steem_getContent_wrapper, opDetail.author,
+              opDetail.permlink);
+            if (content === undefined || content === null) {
+              console.log("Couldn't process operation, continuing." +
+                " Error: post content response not defined");
+              continue;
+            }
+            var voteDetail = null;
+            for (var k = 0; k < content.active_votes.length; k++) {
+              if (content.active_votes[k].voter.localeCompare(opDetail.voter) == 0) {
+                voteDetail = content.active_votes[k];
+                break;
+              }
+            }
+            if (voteDetail === null) {
+              continue;
+            }
+            var abs_need_rshares = Math.abs(voteDetail.rshares);
+            var vp = recalcVotingPower();
+            // note, these constants are not fully understoof
+            // the _50_ constant was 200, and could possibly be better at 40
+            // TODO : confirm constants are correct
+            // TODO : take delegated stake into consideration?
+            var abs_percentage = (abs_need_rshares * 10000 * 100 * 50 / vp / mAccount.vesting_shares);
+            if (abs_percentage > 100) {
+              abs_percentage = 100;
+            }
+            var percentage = abs_percentage;
+            if (voteDetail.rshares < 0) {
+              percentage = -percentage;
+            }
+            console.log("countering percentage: "+percentage);
+            if (process.env.ACTIVE !== undefined
+              && process.env.ACTIVE !== null
+              && process.env.ACTIVE.localeCompare("true") == 0) {
+              // TODO : cast vote!
+              console.log("BOT WOULD VOTE NOW");
+            } else {
+              console.log("Bot not in active state, not voting");
+            }
+          }
+        } catch (err) {
+          console.log("Couldn't process operation, continuing. Error: "
+            + JSON.stringify(err));
+          continue;
         }
-        console.log("** b " + i + ":t " + j + ", transaction: "+JSON.stringify(transaction));
       }
-      */
-      break;
     }
+    console.log("NUM SELF VOTES from block "+startAtBlockNum+" to" +
+      mProperties.head_block_number + " is "+numSelfVotesProcessed);
     mLastInfos.lastBlock = mProperties.head_block_number;
     wait.for(mongoSave_wrapper, mLastInfos);
     callback();
@@ -114,6 +177,24 @@ function getLastInfos(callback) {
     }
     callback();
   });
+}
+
+function recalcVotingPower(latestBlockTimestamp) {
+  // update account
+  var accounts = wait.for(process.env.STEEM_USER, steem_getAccounts_wrapper);
+  mAccount = accounts[0];
+  var vp = mAccount.voting_power;
+  //last_vote_time = Time.parse(r["last_vote_time"] + 'Z')
+  var lastVoteTime = moment(mAccount.last_vote_time);
+  //now_time = Time.parse(@latest_block["timestamp"] + 'Z')
+  var nowTime = moment(latestBlockTimestamp);
+  var secondsDiff = nowTime.seconds() - lastVoteTime.seconds();
+  var vpRegenerated = secondsDiff * 10000 / 86400 / 5;
+  vp += vpRegenerated;
+  if (vp > 10000) {
+    vp = 10000;
+  }
+  return vp;
 }
 
 /*
@@ -156,8 +237,8 @@ function steem_getSteemGlobaleProperties_wrapper(callback) {
   });
 }
 
-function steem_getAccounts_wrapper(callback) {
-  steem.api.getAccounts([process.env.STEEM_USER], function(err, result) {
+function steem_getAccounts_wrapper(author, callback) {
+  steem.api.getAccounts([author], function(err, result) {
     callback(err, result);
   });
 }
