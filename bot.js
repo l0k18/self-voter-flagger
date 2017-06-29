@@ -66,6 +66,7 @@ function doProcess(startAtBlockNum, callback) {
   wait.launchFiber(function() {
     var totalVotes = 0;
     var numSelfVotes = 0;
+    var numSelfVotesToProcess = 0;
     for (var i = startAtBlockNum; i <= mProperties.head_block_number; i++) {
       var block = wait.for(steem_getBlock_wrapper, i);
       //console.log("block info: "+JSON.stringify(block));
@@ -122,6 +123,9 @@ function doProcess(startAtBlockNum, callback) {
               if (voteDetail === null) {
                 continue;
               }
+
+              numSelfVotesToProcess++;
+
               var abs_need_rshares = Math.abs(voteDetail.rshares);
               var vp = recalcVotingPower();
               // note, these constants are not fully understoof
@@ -156,7 +160,7 @@ function doProcess(startAtBlockNum, callback) {
     }
     console.log("NUM SELF VOTES from block "+startAtBlockNum+" to " +
       mProperties.head_block_number + " is "+numSelfVotes +
-      " out of " + totalVotes + " total");
+      "("+numSelfVotesToProcess+" processed) out of " + totalVotes + " total");
     mLastInfos.lastBlock = mProperties.head_block_number;
     wait.for(mongoSave_wrapper, mLastInfos);
     callback();
