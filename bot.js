@@ -17,6 +17,7 @@ var db;
 
 var mAccount = null;
 var mProperties = null;
+var mLastInfos = null;
 
 
 // Connect to the database first
@@ -35,8 +36,10 @@ mongodb.MongoClient.connect(process.env.MONGODB_URI, function (err, database) {
 function main() {
   steem.config.set('websocket','wss://steemd.steemit.com');
   init(function () {
-    process(process.env.STARTING_BLOCK_NUM, function () {
-      console.log("Finished");
+    getLastInfos(function () {
+      doProcess(mLastInfos.lastBlock, function () {
+        console.log("Finished");
+      });
     });
   });
 }
@@ -55,9 +58,9 @@ function init(callback) {
 }
 
 
-function process(startAtBlockNum, callback) {
+function doProcess(startAtBlockNum, callback) {
   wait.launchFiber(function() {
-    for (var i = startAtBlockNum; i < mProperties.head_block_number; i++) {
+    for (var i = startAtBlockNum; i <= mProperties.head_block_number; i++) {
       var block = wait.for(steem_getBlock_wrapper, i);
       var transactions = block.result.transactions.operations;
       for (var j = 0; j < transactions.length; j++) {
@@ -66,6 +69,30 @@ function process(startAtBlockNum, callback) {
         var tDetail = transaction[1];
         console.log("** b " + i + ":t " + j + ", transaction: "+JSON.stringify(transaction));
       }
+    }
+    mLastInfos.lastBlock = mProperties.head_block_number;
+    wait.for(mongoSave_wrapper, mLastInfos);
+    callback();
+  });
+}
+
+function getLastInfos(callback) {
+  db.collection(DB_RECORDS).find({}).toArray(function(err, data) {
+    if (err || data === null || data === undefined || data.length === 0) {
+      console.log("No last infos data in db, is first time run, set up" +
+        " with defaults");
+      if (process.env.STARTING_BLOCK_NUM !== undefined
+        && process.env.STARTING_BLOCK_NUM !== null) {
+        mLastInfos = {
+          lastBlock: Number(process.env.STARTING_BLOCK_NUM)
+        };
+      } else {
+        mLastInfos = {
+          lastBlock: 0
+        };
+      }
+    } else {
+      mLastInfos = data[0];
     }
     callback();
   });
