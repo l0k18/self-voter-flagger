@@ -10,7 +10,7 @@ Calculates the down vote power to attempt to negate the vote.
 
 One click Heroku deployment
 
-[![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy?template=https://github.com/Steem-FOSSbot/self-voter-flagger)
+[![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy?template=https://github.com/thrize/self-voter-flagger)
 
 ### License
 

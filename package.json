@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/steem-fossbot/self-voter-flagger.git"
+    "url": "https://github.com/thrize/self-voter-flagger.git"
   },
   "keywords": [
     "node", "steem", "bot", "blockchain", "voter", "flag"
@@ -17,9 +17,9 @@
   "author": "thrize",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/steem-fossbot/self-voter-flagger"
+    "url": "https://github.com/thrize/self-voter-flagger"
   },
-  "homepage": "https://github.com/steem-fossbot/self-voter-flagger",
+  "homepage": "https://github.com/thrize/self-voter-flagger",
   "dependencies": {
     "body-parser": "1.13.3",
     "express": "4.13.3",
