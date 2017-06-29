@@ -68,84 +68,86 @@ function doProcess(startAtBlockNum, callback) {
     for (var i = startAtBlockNum; i <= mProperties.head_block_number; i++) {
       var block = wait.for(steem_getBlock_wrapper, i);
       //console.log("block info: "+JSON.stringify(block));
-      var transactions = block.transactions.operations;
+      var transactions = block.transactions;
       for (var j = 0; j < transactions.length; j++) {
         var transaction = transactions[j];
-        var opName = transaction[0];
-        var opDetail = transaction[1];
-        // DEBUG logging
-        try {
-          if (opName !== undefined && opName !== null
-            && opName.localeCompare("vote") == 0) {
-            console.log("DEBUG ** vote at b " + i + ":t " + j + ", detail:" +
-              " "+JSON.stringify(opDetail));
+        for (var k = 0 ; k < transaction.operations.length ; k++) {
+          var opName = transaction.operations[0];
+          var opDetail = transaction.operations[1];
+          // DEBUG logging
+          try {
+            if (opName !== undefined && opName !== null
+              && opName.localeCompare("vote") == 0) {
+              console.log("DEBUG ** vote at b " + i + ":t " + j + ", detail:" +
+                " "+JSON.stringify(opDetail));
 
-            // check vote is a self vote
-            if (opDetail.voter.localeCompare(opDetail.author) != 0) {
-              continue;
-            }
-            numSelfVotesProcessed++;
+              // check vote is a self vote
+              if (opDetail.voter.localeCompare(opDetail.author) != 0) {
+                continue;
+              }
+              numSelfVotesProcessed++;
 
-            // FIRST THINGS FIRST, check their SP
-            // TODO : cache user accounts
-            var accounts = wait.for(steem_getAccounts_wrapper, opDetail.voter);
-            var voterAccount = accounts[0];
-            // TODO : take delegated stake into consideration?
-            var steemPower = getSteemPowerFromVest(voterAccount.vesting_shares);
-            if (steemPower < MIN_SP) {
-              console.log("SP of "+opDetail.voter+" < min of "+MIN_SP
-                +", skipping");
-              continue;
-            }
+              // FIRST THINGS FIRST, check their SP
+              // TODO : cache user accounts
+              var accounts = wait.for(steem_getAccounts_wrapper, opDetail.voter);
+              var voterAccount = accounts[0];
+              // TODO : take delegated stake into consideration?
+              var steemPower = getSteemPowerFromVest(voterAccount.vesting_shares);
+              if (steemPower < MIN_SP) {
+                console.log("SP of "+opDetail.voter+" < min of "+MIN_SP
+                  +", skipping");
+                continue;
+              }
 
-            // SECOND, get rshares of vote from post
-            var content;
-            // TODO : cache posts
-            content = wait.for(steem_getContent_wrapper, opDetail.author,
-              opDetail.permlink);
-            if (content === undefined || content === null) {
-              console.log("Couldn't process operation, continuing." +
-                " Error: post content response not defined");
-              continue;
-            }
-            var voteDetail = null;
-            for (var k = 0; k < content.active_votes.length; k++) {
-              if (content.active_votes[k].voter.localeCompare(opDetail.voter) == 0) {
-                voteDetail = content.active_votes[k];
-                break;
+              // SECOND, get rshares of vote from post
+              var content;
+              // TODO : cache posts
+              content = wait.for(steem_getContent_wrapper, opDetail.author,
+                opDetail.permlink);
+              if (content === undefined || content === null) {
+                console.log("Couldn't process operation, continuing." +
+                  " Error: post content response not defined");
+                continue;
+              }
+              var voteDetail = null;
+              for (var m = 0; m < content.active_votes.length; m++) {
+                if (content.active_votes[m].voter.localeCompare(opDetail.voter) == 0) {
+                  voteDetail = content.active_votes[m];
+                  break;
+                }
+              }
+              if (voteDetail === null) {
+                continue;
+              }
+              var abs_need_rshares = Math.abs(voteDetail.rshares);
+              var vp = recalcVotingPower();
+              // note, these constants are not fully understoof
+              // the _50_ constant was 200, and could possibly be better at 40
+              // TODO : confirm constants are correct
+              // TODO : take delegated stake into consideration?
+              var abs_percentage = (abs_need_rshares * 10000 * 100 * 50 / vp / mAccount.vesting_shares);
+              if (abs_percentage > 100) {
+                abs_percentage = 100;
+              }
+              var percentage = abs_percentage;
+              if (voteDetail.rshares < 0) {
+                percentage = -percentage;
+              }
+              console.log("countering percentage: "+percentage);
+              if (process.env.ACTIVE !== undefined
+                && process.env.ACTIVE !== null
+                && process.env.ACTIVE.localeCompare("true") == 0) {
+                // TODO : cast vote!
+                console.log("BOT WOULD VOTE NOW");
+              } else {
+                console.log("Bot not in active state, not voting");
               }
             }
-            if (voteDetail === null) {
-              continue;
-            }
-            var abs_need_rshares = Math.abs(voteDetail.rshares);
-            var vp = recalcVotingPower();
-            // note, these constants are not fully understoof
-            // the _50_ constant was 200, and could possibly be better at 40
-            // TODO : confirm constants are correct
-            // TODO : take delegated stake into consideration?
-            var abs_percentage = (abs_need_rshares * 10000 * 100 * 50 / vp / mAccount.vesting_shares);
-            if (abs_percentage > 100) {
-              abs_percentage = 100;
-            }
-            var percentage = abs_percentage;
-            if (voteDetail.rshares < 0) {
-              percentage = -percentage;
-            }
-            console.log("countering percentage: "+percentage);
-            if (process.env.ACTIVE !== undefined
-              && process.env.ACTIVE !== null
-              && process.env.ACTIVE.localeCompare("true") == 0) {
-              // TODO : cast vote!
-              console.log("BOT WOULD VOTE NOW");
-            } else {
-              console.log("Bot not in active state, not voting");
-            }
+          } catch (err) {
+            console.log("Couldn't process operation, continuing. Error: "
+              + JSON.stringify(err));
+            continue;
           }
-        } catch (err) {
-          console.log("Couldn't process operation, continuing. Error: "
-            + JSON.stringify(err));
-          continue;
         }
       }
     }
