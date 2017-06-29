@@ -62,6 +62,8 @@ function doProcess(startAtBlockNum, callback) {
   wait.launchFiber(function() {
     for (var i = startAtBlockNum; i <= mProperties.head_block_number; i++) {
       var block = wait.for(steem_getBlock_wrapper, i);
+      console.log("block info: "+JSON.stringify(block));
+      /*
       var transactions = block.result.transactions.operations;
       for (var j = 0; j < transactions.length; j++) {
         var transaction = transactions[j];
@@ -69,11 +71,22 @@ function doProcess(startAtBlockNum, callback) {
         var tDetail = transaction[1];
         if (tName !== undefined && tName !== null
             && tName.localeCompare("vote")) {
-          // get post to check rshares
+          // TODO : get post to check rshares assigned to author
+          var abs_need_rshares = 0; // this will be set after
 
+          var vp = mAccount.voting_power;
+          last_vote_time = Time.parse(r["last_vote_time"] + 'Z')
+          now_time = Time.parse(@latest_block["timestamp"] + 'Z')
+          seconds_passed = (now_time - last_vote_time).to_i
+          vp_regenerated = seconds_passed * 10000 / 86400 / 5
+          vp += vp_regenerated
+          vp = 10000 if vp > 10000;
+          var abs_percentage = (abs_need_rshares * 10000 * 100 * 200 / vp / vests).to_i
         }
         console.log("** b " + i + ":t " + j + ", transaction: "+JSON.stringify(transaction));
       }
+      */
+      break;
     }
     mLastInfos.lastBlock = mProperties.head_block_number;
     wait.for(mongoSave_wrapper, mLastInfos);
