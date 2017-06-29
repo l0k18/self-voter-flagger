@@ -155,7 +155,7 @@ function doProcess(startAtBlockNum, callback) {
       }
     }
     console.log("NUM SELF VOTES from block "+startAtBlockNum+" to " +
-      mProperties.head_block_number + " is "+numSelfVotesProcessed +
+      mProperties.head_block_number + " is "+numSelfVotes +
       " out of " + totalVotes + " total");
     mLastInfos.lastBlock = mProperties.head_block_number;
     wait.for(mongoSave_wrapper, mLastInfos);
