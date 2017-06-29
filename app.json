@@ -1,0 +1,14 @@
+{
+  "name": "self-voter-flagger",
+  "description": "Bot to auto flag self voters",
+  "repository": "https://github.com/steem-fossbot/self-voting-flagger",
+  "keywords": ["node", "steem", "bot", "blockchain", "voter", "flag"],
+  "addons": ["mongolab", "scheduler:standard"],
+  "env": {
+    "STEEM_USER": "",
+    "POSTING_KEY_PRV": "",
+    "MIN_SP": 1000,
+    "ACTIVE": "true",
+    "STARTING_BLOCK_NUM": "13247766"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "name": "self-voter-flagger",
+  "version": "0.0.1",
+  "description": "Bot to auto flag self voters",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/steem-fossbot/self-voter-flagger.git"
+  },
+  "keywords": [
+    "node", "steem", "bot", "blockchain", "voter", "flag"
+  ],
+  "author": "thrize",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/steem-fossbot/self-voter-flagger"
+  },
+  "homepage": "https://github.com/steem-fossbot/self-voter-flagger",
+  "dependencies": {
+    "body-parser": "1.13.3",
+    "express": "4.13.3",
+    "steem": "^0.4.7",
+    "q": "1.4.1",
+    "string": "3.3.3",
+    "wait.for": "0.6.6",
+    "moment": "2.17.1",
+    "moment-timezone": "0.5.11",
+    "mongodb": "2.0.43"
+  }
+}
