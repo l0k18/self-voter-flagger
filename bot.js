@@ -52,7 +52,7 @@ function init(callback) {
     mProperties = wait.for(steem_getSteemGlobaleProperties_wrapper);
     console.log("global properties: "+JSON.stringify(mProperties));
     // get Steem Power of bot account
-    var accounts = wait.for(process.env.STEEM_USER, steem_getAccounts_wrapper);
+    var accounts = wait.for(steem_getAccounts_wrapper, process.env.STEEM_USER);
     mAccount = accounts[0];
     console.log("account: "+JSON.stringify(mAccount));
     // set up some vars
@@ -88,7 +88,7 @@ function doProcess(startAtBlockNum, callback) {
 
             // FIRST THINGS FIRST, check their SP
             // TODO : cache user accounts
-            var accounts = wait.for(opDetail.voter, steem_getAccounts_wrapper);
+            var accounts = wait.for(steem_getAccounts_wrapper, opDetail.voter);
             var voterAccount = accounts[0];
             // TODO : take delegated stake into consideration?
             var steemPower = getSteemPowerFromVest(voterAccount.vesting_shares);
@@ -181,7 +181,7 @@ function getLastInfos(callback) {
 
 function recalcVotingPower(latestBlockTimestamp) {
   // update account
-  var accounts = wait.for(process.env.STEEM_USER, steem_getAccounts_wrapper);
+  var accounts = wait.for(steem_getAccounts_wrapper, process.env.STEEM_USER);
   mAccount = accounts[0];
   var vp = mAccount.voting_power;
   //last_vote_time = Time.parse(r["last_vote_time"] + 'Z')
