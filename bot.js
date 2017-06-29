@@ -68,7 +68,7 @@ function doProcess(startAtBlockNum, callback) {
     for (var i = startAtBlockNum; i <= mProperties.head_block_number; i++) {
       var block = wait.for(steem_getBlock_wrapper, i);
       //console.log("block info: "+JSON.stringify(block));
-      var transactions = block.result.transactions.operations;
+      var transactions = block.transactions.operations;
       for (var j = 0; j < transactions.length; j++) {
         var transaction = transactions[j];
         var opName = transaction[0];
